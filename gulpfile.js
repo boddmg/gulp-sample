@@ -1,6 +1,7 @@
 var gulp = require('gulp');
 var gutil = require('gulp-util');
 var watch = require('gulp-watch');
+var concat = require('gulp-concat');
 var coffee = require('gulp-coffee');
 var watchPath = require('gulp-watch-path')
 
@@ -10,8 +11,12 @@ var paths = {
 };
 
 var convertCoffee = function(srcPath, dstDir) {
-  gulp.src(srcPath)
+  var stream = gulp.src(srcPath)
     .pipe(coffee())
+    .on('error', function(error) {
+      gutil.log(error.toString());
+      this.emit('end');
+      })
     .pipe(gulp.dest(dstDir));
 }
 
@@ -28,4 +33,11 @@ gulp.task('watch', function(){
   })
 })
 
-gulp.task('default', ['coffee', 'watch']);
+gulp.task('concat', function() {
+  return gulp.src(paths.dstJsDir+"*.js")
+    .pipe(concat("index.js"))
+    .pipe(gulp.dest("./"));
+})
+
+gulp.task('default', ['coffee']);
+gulp.task('watch-concat', ['watch', 'concat']);
