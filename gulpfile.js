@@ -4,40 +4,63 @@ var watch = require('gulp-watch');
 var concat = require('gulp-concat');
 var coffee = require('gulp-coffee');
 var watchPath = require('gulp-watch-path')
+var clean = require('gulp-clean');
+var rename = require('gulp-rename');
+var browserify = require('gulp-browserify');
+var runSequence = require('run-sequence');
+var uglify = require('gulp-uglify');
 
 var paths = {
   coffee: ['./src/coffee/*.coffee'],
-  dstJsDir: "./dist/js/"
+  static: ['./src/html/*.html', './src/css/*.css'],
+  dstJsDir: "./dist/js/",
+  distDir: "./dist/",
+  mainHtml: "./src/html/index.html"
 };
-
-var convertCoffee = function(srcPath, dstDir) {
-  var stream = gulp.src(srcPath)
-    .pipe(coffee())
-    .on('error', function(error) {
-      gutil.log(error.toString());
-      this.emit('end');
-      })
-    .pipe(gulp.dest(dstDir));
-}
-
-gulp.task('coffee', function(){
-  convertCoffee(paths.coffee, paths.dstJsDir);
-});
 
 gulp.task('watch', function(){
   gulp.watch(paths.coffee, function(event) {
-    var paths = watchPath(event, "src/coffee/", "dist/js/");
-    gutil.log(gutil.colors.green(event.type) + " " + paths.srcPath);
-    gutil.log('Dist ' + paths.distDir);
-    convertCoffee(paths.srcPath, paths.distDir);
-  })
+    runSequence('minify');
+  });
+
+  gulp.watch(paths.static, function(event) {
+    var changedPaths = watchPath(event, "src/", "dist/");
+    gutil.log(gutil.colors.green(event.type) + " " + changedPaths.srcPath);
+    gutil.log('Dist ' + changedPaths.distDir);
+    if (changedPaths.srcPath.match("index.html") != null) {
+      gulp.src(changedPaths.srcPath)
+        .pipe(gulp.dest("./dist/"));
+    }else{
+    gulp.src(changedPaths.srcPath)
+      .pipe(gulp.dest(changedPaths.distDir));
+    }
+  });
+
 })
 
-gulp.task('concat', function() {
-  return gulp.src(paths.dstJsDir+"*.js")
-    .pipe(concat("index.js"))
-    .pipe(gulp.dest("./"));
+gulp.task('minify', function() {
+  gulp.src(paths.coffee)
+    .pipe(coffee())
+    .on('error', function(error) {
+      gutil.log(error.toString());
+      })
+    .pipe(concat("app.js"))
+    .pipe(gulp.dest(paths.distDir))
+    .pipe(browserify())
+    .on('error', function(error) {
+      gutil.log(error.toString());
+      })
+    .pipe(rename("bundle.js"))
+    // .pipe(uglify())
+    .pipe(gulp.dest(paths.distDir))
 })
 
-gulp.task('default', ['coffee']);
-gulp.task('watch-concat', ['watch', 'concat']);
+gulp.task('copy-static', function(){
+  gulp.src(paths.static[1])
+    .pipe(gulp.dest("./dist/css/"));
+  gulp.src(paths.mainHtml)
+    .pipe(gulp.dest("./dist/"));
+})
+
+
+gulp.task('default', ['minify', 'copy-static', 'watch']);
