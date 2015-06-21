@@ -1,10 +1,14 @@
-RecordRTC = require("recordrtc")
-recorder = RecordRTC(mediaStream, { type: 'audio'})
+root = window
+# RecordRTC = require("recordrtc")
+session = {
+    audio: true,
+    video: false
+}
 navigator.getUserMedia  = navigator.getUserMedia ||
   navigator.webkitGetUserMedia ||
   navigator.mozGetUserMedia ||
   navigator.msGetUserMedia
-
+recorder = null
 
 shifter = require("pitch-shift")(
   onData = (frame) ->
@@ -23,16 +27,22 @@ shifter(new Float32Array([1, 1, 0, 1, 0, 0, 0 ])) # example data
 
 console.log "end"
 
-window.onRecordClick = ()->
-  if this.recording
-    this.isRecording = false
+root.recording = false
+root.onRecordClick = ()->
+  if recording
     recorder.stopRecording( (audioURL)->
       console.log recorder.bufferSize
-  )
-
+      this.isRecording = false
+    )
   else
-    this.recording = true
-    recorder.startRecording()
+    onSuccess = (mediaStream) ->
+      # recorder = RecordRTC(mediaStream)
+      console.log "getUserMedia"
+      console.log mediaStream
+    navigator.getUserMedia(session, onSuccess,  -> )
+    # recording = true
+    # recorder.startRecording()
   console.log "click"
+
 
 this.testing = 1
